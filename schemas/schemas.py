@@ -1,0 +1,72 @@
+from datetime import date
+
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
+
+# User part
+class UserBase(BaseModel):
+    username: str = Field(min_length=1, max_length=50)
+    email: EmailStr = Field(max_length=120)
+
+class UserCreate(UserBase):
+    password: str = Field(min_length=8)
+
+class UserPublic(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    username: str
+
+class UserPrivate(UserPublic):
+    email: EmailStr
+
+class UserUpdate(BaseModel):
+    username: str | None = Field(default=None, min_length=1, max_length=50)
+    email: EmailStr | None = Field(default=None, max_length=120)
+
+# Token part
+class Token(BaseModel):
+    access_token: str
+    token_type: str 
+
+# Director part
+class DirectorBase(BaseModel):
+    first_name: str = Field(min_length=1, max_length=50)
+    last_name: str = Field(min_length=1, max_length=50)
+    birthday_date: date 
+    country: str = Field(min_length=1, max_length=50)
+
+class DirectorResponse(DirectorBase):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+
+class DirectorCreate(DirectorBase):
+    pass
+
+class DirectorUpdate(DirectorBase):
+    first_name: str | None = Field(default=None, min_length=1, max_length=50)
+    last_name: str | None = Field(default=None, min_length=1, max_length=50)
+    birthday_date: date | None = None
+    country: str | None = Field(default=None, min_length=1, max_length=50) 
+
+# Movie part
+class MovieBase(BaseModel):
+    title: str = Field(min_length=1, max_length=50)
+    genre: str = Field(min_length=1, max_length=50)
+    release_year: int
+
+class MovieResponse(MovieBase):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    director_id: int
+
+    director: DirectorResponse
+
+class MovieCreate(MovieBase):
+    director_id: int
+
+class MovieUpdate(MovieBase):
+    title: str | None = Field(default=None, min_length=1, max_length=50)
+    genre: str | None = Field(default=None, min_length=1, max_length=50)
+    release_year: int | None
