@@ -12,6 +12,8 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(120), unique=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(String(200), nullable=False)
 
+    role: Mapped[str] = mapped_column(String(50), default="user", server_default="user")
+
 class Director(Base):
     __tablename__ = "directors"
 

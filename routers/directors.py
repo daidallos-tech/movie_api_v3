@@ -11,19 +11,30 @@ from schemas.schemas import (
     DirectorCreate,
     DirectorUpdate,
 )
+from routers.auth import(
+     CurrentUser,
+     CurrentAdmin,
+)
 
 router = APIRouter(prefix="/directors", tags=["Directors"])
 
+
+# --- USER'S ROUTERS ---
 # Return all directors
 @router.get("/", response_model=list[DirectorResponse])
-async def get_directors(db: Annotated[AsyncSession, Depends(get_db)]):
+async def get_directors(current_user: CurrentUser, db: Annotated[AsyncSession, Depends(get_db)]):
     result = await db.execute(select(models.Director))
     directors = result.scalars().all()
     return directors
 
+# --- ADMIN'S ROUTERS ---
 # Create director
 @router.post("/", response_model=DirectorResponse, status_code=status.HTTP_201_CREATED)
-async def create_director(director: DirectorCreate, db: Annotated[AsyncSession, Depends(get_db)]):
+async def create_director(
+     director: DirectorCreate,
+     db: Annotated[AsyncSession, Depends(get_db)],
+     current_admin: CurrentAdmin,
+):
     result = await db.execute(select(models.Director).where(
         models.Director.first_name == director.first_name,
         models.Director.last_name == director.last_name)
@@ -54,6 +65,7 @@ async def update_director_partial(
     director_id: int,
     director_data: DirectorUpdate,
     db: Annotated[AsyncSession, Depends(get_db)],
+    current_admin: CurrentAdmin,
 ):
     result = await db.execute(select(models.Director).where(models.Director.id == director_id))
     update_director = result.scalars().first()
@@ -72,7 +84,11 @@ async def update_director_partial(
 
 # Delete director
 @router.delete("/{director_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_director(director_id: int, db: Annotated[AsyncSession, Depends(get_db)]):
+async def delete_director(
+    director_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_admin: CurrentAdmin, 
+):
     result = await db.execute(select(models.Director).where(models.Director.id == director_id))
     existing_director = result.scalars().first()
     if not existing_director:

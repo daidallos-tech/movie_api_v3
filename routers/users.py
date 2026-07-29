@@ -11,9 +11,9 @@ from db import models
 from routers.auth import (
     create_access_token,
     hash_password,
-    oauth2_scheme,
-    verify_access_token,
     verify_password,
+    CurrentUser,
+    CurrentAdmin,
 )
 from db.config import settings
 from db.database import get_db
@@ -33,7 +33,7 @@ async def create_user(user: UserCreate, db: Annotated[AsyncSession, Depends(get_
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username already exist"
+            detail="Username already exists"
         )
 
     
@@ -65,8 +65,9 @@ async def login_for_access_token(
 ):
     result = await db.execute(
         select(models.User).where(
-            func.lower(models.User.email) == form_data.username.lower(),
-        ),
+            (func.lower(models.User.email) == form_data.username.lower()) |
+            (func.lower(models.User.username) == form_data.username.lower())
+        )
     )
     user = result.scalars().first()
 
@@ -86,38 +87,8 @@ async def login_for_access_token(
 
 # Get current user
 @router.get("/me", response_model=UserPrivate)
-async def get_current_user(
-    token: Annotated[str, Depends(oauth2_scheme)],
-    db: Annotated[AsyncSession, Depends(get_db)],
-):
-    user_id = verify_access_token(token)
-    if user_id is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    try:
-        user_id_int = int(user_id)
-    except (TypeError, ValueError):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    result = await db.execute(
-        select(models.User).where(models.User.id == user_id_int),
-    )
-    user = result.scalars().first()
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    return user
+async def get_current_user(current_user: CurrentUser):
+    return current_user
 
 # Get user use user's id
 @router.get("/{user_id}", response_model=UserPublic)
@@ -134,7 +105,7 @@ async def get_user(user_id: int, db: Annotated[AsyncSession, Depends(get_db)]):
 async def update_me(
     user_update: UserUpdate,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[models.User, Depends(get_current_user)],
+    current_user: CurrentUser,
 ):
     if (
         user_update.username is not None
@@ -180,10 +151,42 @@ async def update_me(
 @router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user(
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[models.User, Depends(get_current_user)],
-):
-   
+    current_user: CurrentUser,
+):   
+    if current_user.role == "admin":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Admin accounts cannot be deleted by themselves."
+        )
+    
     await db.delete(current_user)
     await db.commit()
 
     return None
+
+# --- ADMIN'S ROUTER ---
+# Delete user by user's id
+@router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_user_by_id(
+    current_admin: CurrentAdmin,
+    user_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    result = await db.execute(select(models.User).where(models.User.id == user_id))
+    user_to_delete = result.scalars().first()
+
+    if not user_to_delete:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail="User not found"
+        )
+
+    if user_to_delete.id == current_admin.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You cannot delete your own admin account from here. Use DELETE /me instead."
+        )
+
+    await db.delete(user_to_delete)
+    await db.commit()
+
