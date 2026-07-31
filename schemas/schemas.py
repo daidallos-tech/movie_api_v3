@@ -15,6 +15,8 @@ class UserPublic(BaseModel):
 
     id: int
     username: str
+    image_file: str | None = None
+    image_path: str | None = None
 
 class UserPrivate(UserPublic):
     email: EmailStr
@@ -39,6 +41,8 @@ class DirectorResponse(DirectorBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    image_file: str | None = None
+    image_path: str | None = None
 
 class DirectorCreate(DirectorBase):
     pass
@@ -60,6 +64,8 @@ class MovieResponse(MovieBase):
 
     id: int
     director_id: int
+    image_file: str | None = None
+    image_path: str | None = None
 
     director: DirectorResponse
 

@@ -11,22 +11,36 @@ class User(Base):
     username: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
     email: Mapped[str] = mapped_column(String(120), unique=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(String(200), nullable=False)
+    image_file: Mapped[str | None] = mapped_column(String(200), default=None, nullable=True)
 
     role: Mapped[str] = mapped_column(String(50), default="user", server_default="user")
+
+    @property
+    def image_path(self) -> str | None:
+        if self.image_file is None:
+            return None
+        return f"/media/profile_pics/{self.image_file}"
 
 class Director(Base):
     __tablename__ = "directors"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    first_name: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
-    last_name: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
+    first_name: Mapped[str] = mapped_column(String(50), nullable=False)
+    last_name: Mapped[str] = mapped_column(String(50), nullable=False)
     birthday_date: Mapped[date] = mapped_column(Date, nullable=False)
     country: Mapped[str] = mapped_column(String(50), nullable=False)
+    image_file: Mapped[str | None] = mapped_column(String(200), default=None, nullable=True)
 
     movies: Mapped[list["Movie"]] = relationship(
         back_populates="director",
         cascade="all, delete-orphan"
     )
+
+    @property
+    def image_path(self) -> str | None:
+        if self.image_file is None:
+            return None
+        return f"/media/dir_pics/{self.image_file}"
 
 class Movie(Base):
     __tablename__ = "movies"
@@ -35,6 +49,7 @@ class Movie(Base):
     title: Mapped[str] = mapped_column(String(50), nullable=False)
     genre: Mapped[str] = mapped_column(String(50), nullable=False)
     release_year: Mapped[int] = mapped_column(Integer, nullable=False)
+    image_file: Mapped[str | None] = mapped_column(String(200), default=None, nullable=True)
     director_id: Mapped[int] = mapped_column(
         ForeignKey("directors.id"),
         nullable=False,
@@ -42,5 +57,11 @@ class Movie(Base):
     )
 
     director: Mapped["Director"] = relationship(back_populates="movies")
+
+    @property
+    def image_path(self) -> str | None:
+        if self.image_file is None:
+            return None
+        return f"/media/movie_posters/{self.image_file}"
 
 # There will be favorite movies table - this one will be use many-to-many relationship user_id = favorite movie_id

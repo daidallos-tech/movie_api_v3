@@ -6,6 +6,7 @@ dependencies = [
     "asyncpg>=0.31.0",
     "fastapi[standard]>=0.140.7",
     "greenlet>=3.5.4",
+    "pillow>=12.3.0",
     "pwdlib[argon2]>=0.3.0",
     "pydantic-settings>=2.14.2",
     "pyjwt>=2.13.0",

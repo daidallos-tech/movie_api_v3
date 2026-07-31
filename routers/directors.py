@@ -1,8 +1,8 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status, HTTPException
+from fastapi import APIRouter, Depends, status, HTTPException, UploadFile, File, Response
+from PIL import UnidentifiedImageError
 from sqlalchemy import select
-from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 import db.models as models
 from db.database import get_db
@@ -15,6 +15,9 @@ from routers.auth import(
      CurrentUser,
      CurrentAdmin,
 )
+from starlette.concurrency import run_in_threadpool
+from db.config import settings
+from utils.image_utils import delete_image, process_and_save_image
 
 router = APIRouter(prefix="/directors", tags=["Directors"])
 
@@ -22,7 +25,7 @@ router = APIRouter(prefix="/directors", tags=["Directors"])
 # --- USER'S ROUTERS ---
 # Return all directors
 @router.get("/", response_model=list[DirectorResponse])
-async def get_directors(current_user: CurrentUser, db: Annotated[AsyncSession, Depends(get_db)]):
+async def get_directors(db: Annotated[AsyncSession, Depends(get_db)]):
     result = await db.execute(select(models.Director))
     directors = result.scalars().all()
     return directors
@@ -98,3 +101,75 @@ async def delete_director(
 
     await db.delete(existing_director)
     await db.commit()
+
+# Upload director's image
+@router.patch("/{director_id}/picture", response_model=DirectorResponse)
+async def upload_director_picture(
+    director_id: int,
+    file: Annotated[UploadFile, File(...)],
+    current_admin: CurrentAdmin,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    director = await db.get(models.Director, director_id)
+
+    if director is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Director not found",
+        )
+    
+    content = await file.read()
+
+    if len(content) > settings.max_upload_size_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"File too large. Maximum size is {settings.max_upload_size_bytes // (1024 * 1024)}MB",
+        )
+
+    try:
+        new_filename = await run_in_threadpool(process_and_save_image, content, "director")
+    except UnidentifiedImageError as err:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid image file. Please upload a valid image (JPEG, PNG, GIF, WebP).",
+        ) from err
+
+    old_filename = director.image_file
+
+    director.image_file = new_filename
+    await db.commit()
+    await db.refresh(director)
+
+    if old_filename:
+        delete_image(old_filename, "director")
+
+    return director
+
+# Delete director's image
+@router.delete("/{director_id}/picture", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_director_picture(
+    director_id: int,
+    current_admin: CurrentAdmin,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    director = await db.get(models.Director, director_id)
+    
+    if director is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Director not found",
+        )
+    
+    old_filename = director.image_file
+
+    if old_filename is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No director picture to delete",
+        )
+
+    director.image_file = None
+    await db.commit()
+    delete_image(old_filename, "director")
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
