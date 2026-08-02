@@ -1,5 +1,5 @@
-from datetime import date
-from sqlalchemy import ForeignKey, Integer, String, Date
+from datetime import date, UTC, datetime
+from sqlalchemy import ForeignKey, Integer, String, Date, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from db.database import Base
@@ -14,6 +14,11 @@ class User(Base):
     image_file: Mapped[str | None] = mapped_column(String(200), default=None, nullable=True)
 
     role: Mapped[str] = mapped_column(String(50), default="user", server_default="user")
+
+    reset_tokens: Mapped[list["PasswordResetToken"]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
 
     @property
     def image_path(self) -> str | None:
@@ -63,5 +68,22 @@ class Movie(Base):
         if self.image_file is None:
             return None
         return f"/media/movie_posters/{self.image_file}"
+
+class PasswordResetToken(Base):
+    __tablename__ = "password_reset_tokens"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+    )
+
+    user: Mapped[User] = relationship(back_populates="reset_tokens")
 
 # There will be favorite movies table - this one will be use many-to-many relationship user_id = favorite movie_id
