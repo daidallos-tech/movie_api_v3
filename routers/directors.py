@@ -4,6 +4,8 @@ from fastapi import APIRouter, Depends, status, HTTPException, UploadFile, File,
 from PIL import UnidentifiedImageError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi_pagination import LimitOffsetPage
+from fastapi_pagination.ext.sqlalchemy import paginate
 import db.models as models
 from db.database import get_db
 from schemas.schemas import (
@@ -24,11 +26,13 @@ router = APIRouter(prefix="/directors", tags=["Directors"])
 
 # --- USER'S ROUTERS ---
 # Return all directors
-@router.get("/", response_model=list[DirectorResponse])
+@router.get("/", response_model=LimitOffsetPage[DirectorResponse])
 async def get_directors(db: Annotated[AsyncSession, Depends(get_db)]):
-    result = await db.execute(select(models.Director))
-    directors = result.scalars().all()
-    return directors
+    query = (
+            select(models.Director)
+            .order_by(models.Director.id.desc())
+        )
+    return await paginate(db, query)
 
 # --- ADMIN'S ROUTERS ---
 # Create director

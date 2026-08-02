@@ -5,6 +5,8 @@ from PIL import UnidentifiedImageError
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi_pagination import LimitOffsetPage
+from fastapi_pagination.ext.sqlalchemy import paginate
 import db.models as models
 from db.database import get_db
 from starlette.concurrency import run_in_threadpool
@@ -26,11 +28,14 @@ router = APIRouter(prefix="/movies", tags=["Movies"])
 # --- USER'S ROUTERS ---
 
 # Return all movies
-@router.get("/", response_model=list[MovieResponse])
+@router.get("/", response_model=LimitOffsetPage[MovieResponse])
 async def get_movies(db: Annotated[AsyncSession, Depends(get_db)]):
-    result = await db.execute(select(models.Movie).options(selectinload(models.Movie.director)))
-    movies = result.scalars().all()
-    return movies
+    query = (
+        select(models.Movie)
+        .options(selectinload(models.Movie.director))
+        .order_by(models.Movie.id.desc())
+    )
+    return await paginate(db, query)
 
 
 # --- ADMIN'S ROUTERS ---

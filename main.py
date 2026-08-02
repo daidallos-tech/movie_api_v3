@@ -9,6 +9,8 @@ from routers.users import router as users_router
 from routers.movies import router as movies_router
 from routers.directors import router as directors_router
 
+from fastapi_pagination import add_pagination
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     # Startup
@@ -27,4 +29,6 @@ app = FastAPI(
 app.include_router(users_router, prefix="/api/users", tags=["Users"])
 app.include_router(movies_router)
 app.include_router(directors_router)
+
+add_pagination(app)
 
