@@ -13,12 +13,12 @@ from fastapi_pagination import add_pagination
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    # Startup
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    print("Application started")
+
     yield
-    # Shutdown
+
     await engine.dispose()
+    print("Application stopped")
 
 app = FastAPI(
     title="Movie API",
