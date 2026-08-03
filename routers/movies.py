@@ -60,7 +60,7 @@ async def get_movies(
 
 # Return movie using movie's id
 @router.get("/{movie_id}", response_model=MovieResponse)
-async def get_movie(movie_id: int, db: Annotated[AsyncSession, Depends(get_db)]):
+async def get_movie_by_id(movie_id: int, db: Annotated[AsyncSession, Depends(get_db)]):
     result = await db.execute(
         select(models.Movie)
         .options(selectinload(models.Movie.director))

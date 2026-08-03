@@ -2,7 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, status, HTTPException, UploadFile, File, Response
 from PIL import UnidentifiedImageError
-from sqlalchemy import select
+from sqlalchemy import select, extract
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi_pagination import LimitOffsetPage
 from fastapi_pagination.ext.sqlalchemy import paginate
@@ -14,12 +14,14 @@ from schemas.schemas import (
     DirectorUpdate,
 )
 from routers.auth import(
-     CurrentUser,
-     CurrentAdmin,
+    CurrentUser,
+    CurrentAdmin,
 )
 from starlette.concurrency import run_in_threadpool
 from db.config import settings
 from utils.image_utils import delete_image, process_and_save_image
+
+from datetime import date
 
 router = APIRouter(prefix="/directors", tags=["Directors"])
 
@@ -27,12 +29,45 @@ router = APIRouter(prefix="/directors", tags=["Directors"])
 # --- USER'S ROUTERS ---
 # Return all directors
 @router.get("/", response_model=LimitOffsetPage[DirectorResponse])
-async def get_directors(db: Annotated[AsyncSession, Depends(get_db)]):
+async def get_directors(
+    db: Annotated[AsyncSession, 
+    Depends(get_db)],
+    first_name: str | None = None,
+    last_name: str | None = None,
+    country: str | None = None,
+    birth_year: int | None = None,
+):
     query = (
             select(models.Director)
             .order_by(models.Director.id.desc())
         )
+
+    if first_name:
+        query = query.where(models.Director.first_name.ilike(f"%{first_name}"))
+
+    if last_name:
+        query = query.where(models.Director.last_name.ilike(f"%{last_name}"))
+
+    if country:
+        query = query.where(models.Director.country == country)
+
+    if birth_year:
+        query = query.where(extract("year", models.Director.birthday_date) == birth_year)
+
+    
     return await paginate(db, query)
+
+# Get director using director's id
+@router.get("/{director_id}", response_model=DirectorResponse)
+async def get_director_by_id(director_id: int, db: Annotated[AsyncSession, Depends(get_db)]):
+    result = await db.execute(
+        select(models.Director)
+        .where(models.Director.id == director_id)
+    )
+    director = result.scalars().first()
+    if director:
+        return director
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Director not found")
 
 # --- ADMIN'S ROUTERS ---
 # Create director
