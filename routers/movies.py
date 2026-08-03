@@ -29,13 +29,47 @@ router = APIRouter(prefix="/movies", tags=["Movies"])
 
 # Return all movies
 @router.get("/", response_model=LimitOffsetPage[MovieResponse])
-async def get_movies(db: Annotated[AsyncSession, Depends(get_db)]):
+async def get_movies(
+    db: Annotated[AsyncSession,
+    Depends(get_db)],
+    genre: str | None = None,
+    release_year: int | None = None,
+    title: str | None = None,
+    director_id: int | None = None
+):
     query = (
         select(models.Movie)
         .options(selectinload(models.Movie.director))
-        .order_by(models.Movie.id.desc())
+        #.order_by(models.Movie.id.desc())
     )
+    if genre:
+        query = query.where(models.Movie.genre == genre)
+
+    if release_year:
+        query = query.where(models.Movie.release_year == release_year)
+
+    if title:
+        query = query.where(models.Movie.title.ilike(f"%{title}%"))
+
+    if director_id:
+        query = query.where(models.Movie.director_id == director_id)
+
+    query = query.order_by(models.Movie.id.desc())
+    
     return await paginate(db, query)
+
+# Return movie using movie's id
+@router.get("/{movie_id}", response_model=MovieResponse)
+async def get_movie(movie_id: int, db: Annotated[AsyncSession, Depends(get_db)]):
+    result = await db.execute(
+        select(models.Movie)
+        .options(selectinload(models.Movie.director))
+        .where(models.Movie.id == movie_id)
+    )
+    movie = result.scalars().first()
+    if movie:
+        return movie
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Movie not found")
 
 
 # --- ADMIN'S ROUTERS ---
