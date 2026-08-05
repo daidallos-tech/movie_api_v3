@@ -5,6 +5,7 @@ from PIL import UnidentifiedImageError
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import IntegrityError
 from fastapi_pagination import LimitOffsetPage
 from fastapi_pagination.ext.sqlalchemy import paginate
 import db.models as models
@@ -70,6 +71,87 @@ async def get_movie_by_id(movie_id: int, db: Annotated[AsyncSession, Depends(get
     if movie:
         return movie
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Movie not found")
+
+# Like Movie use movie's id
+@router.post("/{movie_id}/like")
+async def like_movie(
+    movie_id: int,
+    current_user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):   
+    movie = await db.get(models.Movie, movie_id)
+    
+    if movie is None:
+        raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Movie not found."
+        )
+    
+    existing_like = await db.scalar(
+            select(models.LikeMovie)
+            .where(models.LikeMovie.movie_id == movie_id, models.LikeMovie.user_id == current_user.id)
+    )
+
+    if existing_like:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You have already liked this movie."
+        )
+
+    like = models.LikeMovie(
+        user_id=current_user.id,
+        movie_id=movie_id,
+    )
+
+    db.add(like)
+    
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You have already liked this movie.",
+        )
+
+    return {
+        "message": "Movie liked successfully."
+    }
+
+# Delete like use movie's id
+@router.delete("/{movie_id}/like")
+async def delete_like(
+    movie_id: int,
+    current_user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+): 
+    movie = await db.get(models.Movie, movie_id)
+        
+    if movie is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Movie not found."
+        )
+    
+    existing_like = await db.scalar(
+            select(models.LikeMovie).where(
+                models.LikeMovie.movie_id == movie_id,
+                models.LikeMovie.user_id == current_user.id
+                )
+        )
+    
+    if not existing_like:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="You haven't liked this movie"
+        ) 
+
+    await db.delete(existing_like)
+    await db.commit()
+
+    return {
+        "message": "Movie unliked successfully."
+    }
 
 
 # --- ADMIN'S ROUTERS ---
