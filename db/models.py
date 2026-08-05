@@ -1,5 +1,5 @@
 from datetime import date, UTC, datetime
-from sqlalchemy import ForeignKey, Integer, String, Date, DateTime, UniqueConstraint
+from sqlalchemy import ForeignKey, Integer, String, Date, DateTime, UniqueConstraint, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from db.database import Base
@@ -23,6 +23,11 @@ class User(Base):
     like_movie: Mapped[list["LikeMovie"]] = relationship(
         back_populates="user",
         cascade="all, delete-orphan",
+    )
+
+    comment_movie: Mapped[list["CommentMovie"]] = relationship(
+            back_populates="user",
+            cascade="all, delete-orphan" 
     )
 
     @property
@@ -73,6 +78,11 @@ class Movie(Base):
         cascade="all, delete-orphan",
     )
 
+    comment_movie: Mapped[list["CommentMovie"]] = relationship(
+        back_populates="movie",
+        cascade="all, delete-orphan" 
+    )
+
     @property
     def image_path(self) -> str | None:
         if self.image_file is None:
@@ -107,10 +117,30 @@ class LikeMovie(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     movie_id: Mapped[int] = mapped_column(ForeignKey("movies.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime,
-        default=datetime.utcnow,
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
         nullable=False,
     )
 
     user: Mapped[User] = relationship(back_populates="like_movie")
     movie: Mapped[Movie] = relationship(back_populates="like_movie")
+
+class CommentMovie(Base):
+    __tablename__ = "comment_movie"
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "movie_id", name="uq_user_movie_comment"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    movie_id: Mapped[int] = mapped_column(ForeignKey("movies.id"), nullable=False)
+    text: Mapped[str] = mapped_column(String(1000), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        nullable=False,
+    )
+
+    user: Mapped[User] = relationship(back_populates="comment_movie")
+    movie: Mapped[Movie] = relationship(back_populates="comment_movie")

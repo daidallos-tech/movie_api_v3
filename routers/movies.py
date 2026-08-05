@@ -15,6 +15,7 @@ from schemas.schemas import (
     MovieResponse,
     MovieCreate,
     MovieUpdate,
+    MovieComment,
 )
 from routers.auth import (
      CurrentUser,
@@ -145,14 +146,95 @@ async def delete_like(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="You haven't liked this movie"
         ) 
-
+    
     await db.delete(existing_like)
     await db.commit()
-
+    
     return {
-        "message": "Movie unliked successfully."
+        "message": "Movie was unliked successfully."
     }
 
+    
+# Comment movie using movie's id
+@router.post("/{movie_id}/comment")
+async def comment_movie(
+    movie_id: int,
+    comment_data: MovieComment,
+    current_user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):   
+    movie = await db.get(models.Movie, movie_id)
+    
+    if movie is None:
+        raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Movie not found."
+        )
+
+    existing_comment = await db.scalar(
+            select(models.CommentMovie)
+            .where(models.CommentMovie.movie_id == movie_id, models.CommentMovie.user_id == current_user.id)
+    )
+
+    if existing_comment:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You have already commented this movie."
+        )
+
+    new_comment = models.CommentMovie(
+        user_id=current_user.id,
+        movie_id=movie_id,
+        text=comment_data.text,
+    )
+
+    db.add(new_comment)
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="You have already commented this movie.",
+            )
+    
+    return {
+        "message": "Comment was created successfully."
+    }
+
+# Delete movie's comment use movie's id
+@router.delete("/{movie_id}/comment")
+async def delete_comment(
+    movie_id: int,
+    current_user: CurrentUser,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):   
+    movie = await db.get(models.Movie, movie_id)
+    
+    if movie is None:
+        raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Movie not found."
+        )
+    
+    existing_comment = await db.scalar(
+            select(models.CommentMovie)
+            .where(models.CommentMovie.movie_id == movie_id, models.CommentMovie.user_id == current_user.id)
+    )
+
+    if not existing_comment:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You've not commented this movie."
+        )
+
+    await db.delete(existing_comment)
+    await db.commit()
+    
+    return {
+        "message": "Comment was deleted successfully."
+    }
+    
 
 # --- ADMIN'S ROUTERS ---
 # Create movie

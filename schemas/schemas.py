@@ -1,6 +1,6 @@
 from datetime import date
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 # User part
 class UserBase(BaseModel):
@@ -67,7 +67,6 @@ class MovieResponse(MovieBase):
     image_file: str | None = None
     image_path: str | None = None
 
-    director: DirectorResponse
 
 class MovieCreate(MovieBase):
     director_id: int
@@ -76,6 +75,17 @@ class MovieUpdate(MovieBase):
     title: str | None = Field(default=None, min_length=1, max_length=50)
     genre: str | None = Field(default=None, min_length=1, max_length=50)
     release_year: int | None
+
+class MovieComment(BaseModel):
+    text: str = Field(min_length=10, max_length=1000)
+
+    @field_validator("text")
+    @classmethod
+    def strip_and_check_spaces(cls, v: str) -> str:
+        cleaned_text = v.strip()
+        if len(cleaned_text) < 10:
+            raise ValueError("Comment should have length more than 10 symbols and cannot have only spaces")
+        return cleaned_text
 
 # Password part
 class ForgotPasswordRequest(BaseModel):
