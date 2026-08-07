@@ -15,6 +15,7 @@ from schemas.schemas import (
     MovieResponse,
     MovieCreate,
     MovieUpdate,
+    MovieLikeRead,
     MovieCommentCreate,
     MovieCommentRead,
 )
@@ -154,6 +155,28 @@ async def delete_like(
     return {
         "message": "Movie was unliked successfully."
     }
+
+# Get like use movie's id
+@router.get("/{movie_id}/likes", response_model=LimitOffsetPage[MovieLikeRead])
+async def get_likes(
+    movie_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)]
+):
+    movie = await db.get(models.Movie, movie_id)
+            
+    if movie is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Movie not found."
+        )
+
+    query = (
+        select(models.LikeMovie)
+        .where(models.LikeMovie.movie_id == movie_id) 
+        .order_by(models.LikeMovie.created_at.desc())
+    )
+
+    return await paginate(db, query)
 
     
 # Comment movie using movie's id

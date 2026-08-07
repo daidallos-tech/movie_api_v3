@@ -76,6 +76,12 @@ class MovieUpdate(MovieBase):
     genre: str | None = Field(default=None, min_length=1, max_length=50)
     release_year: int | None
 
+class MovieLikeRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    user_id: int
+    created_at: datetime
+
 class MovieCommentCreate(BaseModel):
     text: str = Field(min_length=10, max_length=1000)
 
