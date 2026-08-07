@@ -15,7 +15,8 @@ from schemas.schemas import (
     MovieResponse,
     MovieCreate,
     MovieUpdate,
-    MovieComment,
+    MovieCommentCreate,
+    MovieCommentRead,
 )
 from routers.auth import (
      CurrentUser,
@@ -159,7 +160,7 @@ async def delete_like(
 @router.post("/{movie_id}/comment")
 async def comment_movie(
     movie_id: int,
-    comment_data: MovieComment,
+    comment_data: MovieCommentCreate,
     current_user: CurrentUser,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):   
@@ -234,7 +235,31 @@ async def delete_comment(
     return {
         "message": "Comment was deleted successfully."
     }
-    
+
+# Get commentaries use movie's id
+@router.get("/{movie_id}/comments", response_model=LimitOffsetPage[MovieCommentRead])
+async def get_comments(
+    movie_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    movie = await db.get(models.Movie, movie_id)
+
+    if movie is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Movie not found."
+        )
+
+    query = (
+        select(models.CommentMovie)
+        .where(models.CommentMovie.movie_id == movie_id)
+        .options(selectinload(models.CommentMovie.user)) 
+        .order_by(models.CommentMovie.created_at.desc())
+    )
+        
+    return await paginate(db, query)
+
+
 
 # --- ADMIN'S ROUTERS ---
 # Create movie

@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
@@ -76,7 +76,7 @@ class MovieUpdate(MovieBase):
     genre: str | None = Field(default=None, min_length=1, max_length=50)
     release_year: int | None
 
-class MovieComment(BaseModel):
+class MovieCommentCreate(BaseModel):
     text: str = Field(min_length=10, max_length=1000)
 
     @field_validator("text")
@@ -86,6 +86,14 @@ class MovieComment(BaseModel):
         if len(cleaned_text) < 10:
             raise ValueError("Comment should have length more than 10 symbols and cannot have only spaces")
         return cleaned_text
+
+class MovieCommentRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    text: str
+    user_id: int
+    created_at: datetime
 
 # Password part
 class ForgotPasswordRequest(BaseModel):
