@@ -1,15 +1,12 @@
 import os
-from collections.abc import AsyncGenerator
-
-os.environ["DATABASE_URL"] = (
-    "postgresql+psycopg://postgres:379137@localhost/test_movies"
-)
-os.environ["SECRET_KEY"] = "test-secret-key-for-testing-only"
-
 import pytest
+from collections.abc import AsyncGenerator
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
+from sqlalchemy import text
+
+os.environ["DATABASE_URL"] = "postgresql+psycopg://postgres:379137@localhost/test_movies_db"
 
 from db.database import Base, get_db
 from main import app
@@ -28,7 +25,7 @@ def test_engine():
     )
     return engine
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="session", autouse=True)
 async def setup_database(test_engine):
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
@@ -37,39 +34,28 @@ async def setup_database(test_engine):
 
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
-
     await test_engine.dispose()
 
+@pytest.fixture(autouse=True)
+async def clean_tables(test_engine):
+    yield
+    async with test_engine.begin() as conn:
+        for table in reversed(Base.metadata.sorted_tables):
+            await conn.execute(table.delete())
 
 @pytest.fixture
-async def db_session(
-    test_engine,
-    setup_database,
-) -> AsyncGenerator[AsyncSession]:
-    conn = await test_engine.connect()
-    trans = await conn.begin()
-
-    test_async_session = async_sessionmaker(
-        bind=conn,
+async def db_session(test_engine) -> AsyncGenerator[AsyncSession, None]:
+    async_session = async_sessionmaker(
+        bind=test_engine,
         class_=AsyncSession,
         expire_on_commit=False,
-        join_transaction_mode="create_savepoint",
     )
-
-    async with test_async_session() as session:
-        try:
-            yield session
-        finally:
-            await session.close()
-            await trans.rollback()
-            await conn.close()
-
+    async with async_session() as session:
+        yield session
+        await session.close()
 
 @pytest.fixture
-async def client(
-    db_session: AsyncSession,
-) -> AsyncGenerator[AsyncClient]:
-
+async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
     async def override_get_db():
         yield db_session
 
@@ -120,3 +106,34 @@ async def login_user(
 
 def auth_header(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
+
+# === ADMIN ===
+async def create_test_admin(
+    client: AsyncClient,
+    db_session: AsyncSession
+):
+    response = await client.post(
+        "/api/users",
+        json={"username": "admin", "email": "admin@example.com", "password": "password123"}
+    )
+    user_id = response.json()["id"]
+
+    await db_session.execute(
+        text("UPDATE users SET role = 'admin' WHERE id = :user_id"),
+        {"user_id": user_id}
+    )
+    await db_session.commit()
+
+# Login 
+async def login_admin(client: AsyncClient) -> str:
+    response = await client.post(
+        "/api/users/token",
+        data={
+            "username": "admin@example.com",
+            "password": "password123",
+        },
+    )
+    
+    assert response.status_code == 200, f"Login failed: {response.text}"
+    
+    return response.json()["access_token"]
