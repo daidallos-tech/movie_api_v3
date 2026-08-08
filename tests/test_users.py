@@ -2,6 +2,8 @@ import pytest
 from httpx import AsyncClient
 from tests.conftest import auth_header, create_test_user, login_user, create_test_admin, login_admin
 from sqlalchemy.ext.asyncio import AsyncSession
+from pathlib import Path
+from io import BytesIO
 
 
 # CREATION SCENARIOS
@@ -109,6 +111,25 @@ async def test_delete_user_non_authorized(client: AsyncClient):
     )
 
     assert response.status_code == 401
+
+@pytest.mark.anyio
+async def test_upload_profile_picture(client: AsyncClient):
+    await create_test_user(client)
+    token = await login_user(client)
+
+    test_image_path = Path(__file__).parent / "test_image.jpg"
+    image_bytes = test_image_path.read_bytes()
+
+    response = await client.patch(
+        f"/api/users/me/picture",
+        files={"file": ("profile.jpg", image_bytes, "image/jpeg")},
+        headers=auth_header(token),
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["image_file"] is not None
+    assert data["image_file"].endswith(".jpg")
 
 
 # === ADMIN ===
