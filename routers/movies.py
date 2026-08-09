@@ -7,7 +7,7 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 from fastapi_pagination import LimitOffsetPage
-from fastapi_pagination.ext.sqlalchemy import paginate
+from fastapi_pagination.ext.sqlalchemy import apaginate
 import db.models as models
 from db.database import get_db
 from starlette.concurrency import run_in_threadpool
@@ -60,7 +60,7 @@ async def get_movies(
 
     query = query.order_by(models.Movie.id.desc())
     
-    return await paginate(db, query)
+    return await apaginate(db, query)
 
 # Return movie using movie's id
 @router.get("/{movie_id}", response_model=MovieResponse)
@@ -176,7 +176,7 @@ async def get_likes(
         .order_by(models.LikeMovie.created_at.desc())
     )
 
-    return await paginate(db, query)
+    return await apaginate(db, query)
 
     
 # Comment movie using movie's id
@@ -280,7 +280,7 @@ async def get_comments(
         .order_by(models.CommentMovie.created_at.desc())
     )
         
-    return await paginate(db, query)
+    return await apaginate(db, query)
 
 
 
