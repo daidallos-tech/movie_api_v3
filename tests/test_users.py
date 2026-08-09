@@ -3,7 +3,6 @@ from httpx import AsyncClient
 from tests.conftest import auth_header, create_test_user, login_user, create_test_admin, login_admin
 from sqlalchemy.ext.asyncio import AsyncSession
 from pathlib import Path
-from io import BytesIO
 
 
 # CREATION SCENARIOS
@@ -55,6 +54,44 @@ async def test_create_user_validation_error(client: AsyncClient):
     assert response.status_code == 422
     assert "email" in response.text
     assert "password" in response.text
+
+# READ SCENARIOS
+@pytest.mark.anyio
+async def test_get_current_user_success(client: AsyncClient):
+    await create_test_user(client)
+    token = await login_user(client)
+    headers = auth_header(token)
+
+    response = await client.get(
+        "/api/users/me",
+        headers=headers
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["username"] == "testuser"
+    assert data["email"] == "test@example.com"
+
+@pytest.mark.anyio
+async def test_get_user_by_id_success(client: AsyncClient):
+
+    user_response = await client.post(
+            "/api/users",
+            json={"username": "testuser", "email": "user@test.com", "password": "password123"}
+        )
+    user_id = user_response.json()["id"]
+
+    response = await client.get(
+        f"/api/users/{user_id}"
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["username"] == "testuser"
+    assert "id" in data
+    assert "image_file" in data
+    assert "image_path" in data
+
 
 # UPDATE SCENARIOS
 @pytest.mark.anyio
@@ -182,4 +219,3 @@ async def test_delete_non_existing_user_by_admin(client: AsyncClient, db_session
     )
 
     assert response.status_code == 404
-    
