@@ -5,7 +5,7 @@ from PIL import UnidentifiedImageError
 from sqlalchemy import select, extract
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi_pagination import LimitOffsetPage
-from fastapi_pagination.ext.sqlalchemy import paginate
+from fastapi_pagination.ext.sqlalchemy import apaginate
 import db.models as models
 from db.database import get_db
 from schemas.schemas import (
@@ -55,7 +55,7 @@ async def get_directors(
         query = query.where(extract("year", models.Director.birthday_date) == birth_year)
 
     
-    return await paginate(db, query)
+    return await apaginate(db, query)
 
 # Get director using director's id
 @router.get("/{director_id}", response_model=DirectorResponse)
