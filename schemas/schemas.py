@@ -74,7 +74,7 @@ class MovieCreate(MovieBase):
 class MovieUpdate(MovieBase):
     title: str | None = Field(default=None, min_length=1, max_length=50)
     genre: str | None = Field(default=None, min_length=1, max_length=50)
-    release_year: int | None
+    release_year: int | None = None
 
 class MovieLikeRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
