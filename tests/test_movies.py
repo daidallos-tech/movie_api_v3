@@ -1,8 +1,7 @@
 import pytest
 from httpx import AsyncClient
-from tests.conftest import auth_header, create_test_user, login_user, create_test_admin, login_admin
+from tests.conftest import auth_header, create_test_admin, login_admin
 from sqlalchemy.ext.asyncio import AsyncSession
-from pathlib import Path
 
 # CREATE TESTS
 @pytest.mark.anyio
