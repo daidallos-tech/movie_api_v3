@@ -2,6 +2,8 @@ import pytest
 from httpx import AsyncClient
 from tests.conftest import auth_header, create_test_admin, login_admin
 from sqlalchemy.ext.asyncio import AsyncSession
+from pathlib import Path
+import io
 
 # CREATE TESTS
 @pytest.mark.anyio
@@ -344,3 +346,165 @@ async def test_to_delete_movie_by_non_authorized(client: AsyncClient):
     )
 
     assert delete_response.status_code == 401
+
+# UPLOAD/DELETE IMAGE TESTS
+@pytest.mark.anyio
+async def test_upload_movie_picture_success(client: AsyncClient, db_session: AsyncSession):
+    await create_test_admin(client, db_session)
+    token = await login_admin(client)
+    headers = auth_header(token)
+
+    director_response = await client.post(
+        "/directors/",
+        json={
+            "first_name": "Test",
+            "last_name": "Tests",
+            "country": "Testland",
+            "birthday_date": "1970-08-30"
+        },
+        headers=headers
+    )
+    assert director_response.status_code == 201
+
+    director_id = director_response.json()["id"]
+
+    response = await client.post(
+        "/movies/",
+        json={
+            "title": "test_title",
+            "genre": "Horror",
+            "release_year": 2015,
+            "director_id": director_id
+        },
+        headers=headers
+    )
+
+    movie_id = response.json()["id"]
+
+    test_image_path = Path(__file__).parent / "test_image.jpg"
+    image_bytes = test_image_path.read_bytes()
+
+    response = await client.patch(
+        f"/movies/{movie_id}/picture",
+        files={"file": ("profile.jpg", image_bytes, "image/jpeg")},
+        headers=headers
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["image_file"] is not None
+    assert data["image_file"].endswith(".jpg")
+
+@pytest.mark.anyio
+async def test_delete_movie_picture_success(client: AsyncClient, db_session: AsyncSession):
+    await create_test_admin(client, db_session)
+    token = await login_admin(client)
+    headers = auth_header(token)
+
+    director_response = await client.post(
+        "/directors/",
+        json={
+            "first_name": "Test",
+            "last_name": "Tests",
+            "country": "Testland",
+            "birthday_date": "1970-08-30"
+        },
+        headers=headers
+    )
+    assert director_response.status_code == 201
+
+    director_id = director_response.json()["id"]
+
+    response = await client.post(
+        "/movies/",
+        json={
+            "title": "test_title",
+            "genre": "Horror",
+            "release_year": 2015,
+            "director_id": director_id
+        },
+        headers=headers
+    )
+
+    movie_id = response.json()["id"]
+
+    test_image_path = Path(__file__).parent / "test_image.jpg"
+    image_bytes = test_image_path.read_bytes()
+
+    response = await client.patch(
+        f"/movies/{movie_id}/picture",
+        files={"file": ("profile.jpg", image_bytes, "image/jpeg")},
+        headers=headers
+    )
+
+    assert response.status_code == 200
+
+    delete_response = await client.delete(
+        f"/movies/{movie_id}/picture",
+        headers=headers
+    )
+
+    assert delete_response.status_code == 204
+
+@pytest.mark.anyio
+async def test_upload_movie_picture_by_non_authorized(client: AsyncClient):
+
+    test_image_path = Path(__file__).parent / "test_image.jpg"
+    image_bytes = test_image_path.read_bytes()
+    response = await client.patch(
+        f"/movies/99999/picture",
+        files={"file": ("profile.jpg", image_bytes, "image/jpeg")},
+    )
+
+    assert response.status_code == 401
+
+@pytest.mark.anyio
+async def test_delete_movie_picture_by_non_authorized(client: AsyncClient):
+    delete_response = await client.delete(
+            f"/movies/99999/picture",
+        )
+    
+    assert delete_response.status_code == 401
+
+@pytest.mark.anyio
+async def test_upload_big_size_movie_picture(client: AsyncClient, db_session: AsyncSession):
+    await create_test_admin(client, db_session)
+    token = await login_admin(client)
+    headers = auth_header(token)
+
+    director_response = await client.post(
+        "/directors/",
+        json={
+            "first_name": "Test",
+            "last_name": "Tests",
+            "country": "Testland",
+            "birthday_date": "1970-08-30"
+        },
+        headers=headers
+    )
+    assert director_response.status_code == 201
+
+    director_id = director_response.json()["id"]
+
+    response = await client.post(
+        "/movies/",
+        json={
+            "title": "test_title",
+            "genre": "Horror",
+            "release_year": 2015,
+            "director_id": director_id
+        },
+        headers=headers
+    )
+
+    movie_id = response.json()["id"]
+
+    huge_file_bytes = b"0" * 17 * 1024 * 1024 
+
+    response = await client.patch(
+        f"/movies/{movie_id}/picture",
+        files={"file": ("huge_image.jpg", huge_file_bytes, "image/jpeg")},
+        headers=headers,
+    )
+
+    assert response.status_code == 400
