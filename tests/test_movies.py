@@ -1,6 +1,6 @@
 import pytest
 from httpx import AsyncClient
-from tests.conftest import auth_header, create_test_admin, login_admin
+from tests.conftest import auth_header, create_test_admin, login_admin, create_test_user, login_user
 from sqlalchemy.ext.asyncio import AsyncSession
 from pathlib import Path
 import io
@@ -508,3 +508,239 @@ async def test_upload_big_size_movie_picture(client: AsyncClient, db_session: As
     )
 
     assert response.status_code == 400
+
+# LIKE/COMMENT TESTS
+@pytest.mark.anyio
+async def test_like_movie_by_movie_id_success(client: AsyncClient, db_session: AsyncSession):
+    await create_test_admin(client, db_session)
+    token = await login_admin(client)
+    headers = auth_header(token)
+
+    director_response = await client.post(
+        "/directors/",
+        json={
+            "first_name": "Test",
+            "last_name": "Tests",
+            "country": "Testland",
+            "birthday_date": "1970-08-30"
+        },
+        headers=headers
+    )
+    assert director_response.status_code == 201
+
+    director_id = director_response.json()["id"]
+
+    response = await client.post(
+        "/movies/",
+        json={
+            "title": "test_title",
+            "genre": "Horror",
+            "release_year": 2015,
+            "director_id": director_id
+        },
+        headers=headers
+    )
+
+    movie_id = response.json()["id"]
+
+    await create_test_user(client)
+    user_token = await login_user(client)
+    user_headers = auth_header(user_token)
+
+    like_response = await client.post(
+        f"/movies/{movie_id}/like",
+        headers=user_headers
+    )
+
+    assert like_response.status_code == 200
+    data = like_response.json()
+    assert data["message"] == "Movie liked successfully."
+
+@pytest.mark.anyio
+async def test_delete_like_movie_by_movie_id_success(client: AsyncClient, db_session: AsyncSession):
+    await create_test_admin(client, db_session)
+    token = await login_admin(client)
+    headers = auth_header(token)
+
+    director_response = await client.post(
+        "/directors/",
+        json={
+            "first_name": "Test",
+            "last_name": "Tests",
+            "country": "Testland",
+            "birthday_date": "1970-08-30"
+        },
+        headers=headers
+    )
+    assert director_response.status_code == 201
+
+    director_id = director_response.json()["id"]
+
+    response = await client.post(
+        "/movies/",
+        json={
+            "title": "test_title",
+            "genre": "Horror",
+            "release_year": 2015,
+            "director_id": director_id
+        },
+        headers=headers
+    )
+
+    movie_id = response.json()["id"]
+
+    await create_test_user(client)
+    user_token = await login_user(client)
+    user_headers = auth_header(user_token)
+
+    like_response = await client.post(
+        f"/movies/{movie_id}/like",
+        headers=user_headers
+    )
+
+    delete_like_response = await client.delete(
+        f"/movies/{movie_id}/like",
+        headers=user_headers
+    )
+
+    assert delete_like_response.status_code == 200
+    data = delete_like_response.json()
+    assert data["message"] == "Movie was unliked successfully."
+
+@pytest.mark.anyio
+async def test_like_movie_by_movie_id_by_non_authorized(client: AsyncClient):
+    like_response = await client.post(
+            f"/movies/99999/like"
+        )
+
+    assert like_response.status_code == 401
+
+@pytest.mark.anyio
+async def test_delete_like_movie_by_movie_id_by_non_authorized(client: AsyncClient):
+    like_response = await client.delete(
+            f"/movies/99999/like"
+        )
+
+    assert like_response.status_code == 401
+
+
+@pytest.mark.anyio
+async def test_comment_movie_by_movie_id_success(client: AsyncClient, db_session: AsyncSession):
+    await create_test_admin(client, db_session)
+    token = await login_admin(client)
+    headers = auth_header(token)
+
+    director_response = await client.post(
+        "/directors/",
+        json={
+            "first_name": "Test",
+            "last_name": "Tests",
+            "country": "Testland",
+            "birthday_date": "1970-08-30"
+        },
+        headers=headers
+    )
+    assert director_response.status_code == 201
+
+    director_id = director_response.json()["id"]
+
+    response = await client.post(
+        "/movies/",
+        json={
+            "title": "test_title",
+            "genre": "Horror",
+            "release_year": 2015,
+            "director_id": director_id
+        },
+        headers=headers
+    )
+
+    movie_id = response.json()["id"]
+
+    await create_test_user(client)
+    user_token = await login_user(client)
+    user_headers = auth_header(user_token)
+
+    comment_response = await client.post(
+        f"/movies/{movie_id}/comment",
+        json={
+            "text": "Test_title is a good movie!"
+        },
+        headers=user_headers
+    )
+
+    assert comment_response.status_code == 200
+    data = comment_response.json()
+    assert data["message"] == "Comment was created successfully."
+
+@pytest.mark.anyio
+async def test_delete_comment_movie_by_movie_id_success(client: AsyncClient, db_session: AsyncSession):
+    await create_test_admin(client, db_session)
+    token = await login_admin(client)
+    headers = auth_header(token)
+
+    director_response = await client.post(
+        "/directors/",
+        json={
+            "first_name": "Test",
+            "last_name": "Tests",
+            "country": "Testland",
+            "birthday_date": "1970-08-30"
+        },
+        headers=headers
+    )
+    assert director_response.status_code == 201
+
+    director_id = director_response.json()["id"]
+
+    response = await client.post(
+        "/movies/",
+        json={
+            "title": "test_title",
+            "genre": "Horror",
+            "release_year": 2015,
+            "director_id": director_id
+        },
+        headers=headers
+    )
+
+    movie_id = response.json()["id"]
+
+    await create_test_user(client)
+    user_token = await login_user(client)
+    user_headers = auth_header(user_token)
+
+    comment_response = await client.post(
+        f"/movies/{movie_id}/comment",
+        json={
+            "text": "Test_title is a good movie!"
+        },
+        headers=user_headers
+    )
+
+    assert comment_response.status_code == 200
+
+    delete_comment_response = await client.delete(
+        f"/movies/{movie_id}/comment",
+        headers=user_headers
+    )
+
+    assert delete_comment_response.status_code == 200
+    data = delete_comment_response.json()
+    assert data["message"] == "Comment was deleted successfully."
+
+@pytest.mark.anyio
+async def test_comment_movie_by_movie_id_by_non_authorized(client: AsyncClient):
+    like_response = await client.post(
+            f"/movies/99999/comment"
+        )
+
+    assert like_response.status_code == 401
+
+@pytest.mark.anyio
+async def test_delete_comment_movie_by_movie_id_by_non_authorized(client: AsyncClient):
+    like_response = await client.delete(
+            f"/movies/99999/comment"
+        )
+
+    assert like_response.status_code == 401
