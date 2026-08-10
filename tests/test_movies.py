@@ -1,6 +1,6 @@
 import pytest
 from httpx import AsyncClient
-from tests.conftest import auth_header, create_test_admin, login_admin, create_test_user, login_user
+from tests.conftest import auth_header, create_test_admin, login_admin, create_test_user, login_user, create_test_director, create_test_movie
 from sqlalchemy.ext.asyncio import AsyncSession
 from pathlib import Path
 import io
@@ -11,43 +11,20 @@ async def test_create_movie_success(client: AsyncClient, db_session: AsyncSessio
     await create_test_admin(client, db_session)
     token = await login_admin(client)
     headers = auth_header(token)
+    
+    director = await create_test_director(client, headers)
+    director_id = director["id"]
 
-    director_response = await client.post(
-        "/directors/",
-        json={
-            "first_name": "Test",
-            "last_name": "Tests",
-            "country": "Testland",
-            "birthday_date": "1970-08-30"
-        },
-        headers=headers
-    )
-    assert director_response.status_code == 201
-
-    director_id = director_response.json()["id"]
-
-    response = await client.post(
-        "/movies/",
-        json={
-            "title": "test_title",
-            "genre": "Horror",
-            "release_year": 2015,
-            "director_id": director_id
-        },
-        headers=headers
-    )
-
-    assert response.status_code == 201
-    data = response.json()
-    assert data["title"] == "test_title"
-    assert data["genre"] == "Horror"
-    assert data["release_year"] == 2015
-    assert data["director_id"] == director_id
-    assert "id" in data
+    movie_data = await create_test_movie(client, headers, director_id=director_id)
+    
+    assert movie_data["title"] == "test_title"
+    assert movie_data["genre"] == "Horror"
+    assert movie_data["release_year"] == 2015
+    assert movie_data["director_id"] == director_id
+    assert "id" in movie_data
     
 @pytest.mark.anyio
 async def test_create_movie_by_non_authorized(client: AsyncClient):
-
     response = await client.post(
         "/movies/",
         json={
@@ -56,8 +33,8 @@ async def test_create_movie_by_non_authorized(client: AsyncClient):
             "release_year": 2015,
             "director_id": 9999
         }
-    )
-
+     )
+    
     assert response.status_code == 401
 
 @pytest.mark.anyio
@@ -86,19 +63,9 @@ async def test_get_movies_success_with_paginate(client: AsyncClient, db_session:
     token = await login_admin(client)
     headers = auth_header(token)
 
-    director_response = await client.post(
-        "/directors/",
-            json={
-                "first_name": "Test",
-                "last_name": "Tests",
-                "country": "Testland",
-                "birthday_date": "1970-08-30"
-            },
-            headers=headers
-        )
-    assert director_response.status_code == 201
-
-    director_id = director_response.json()["id"]
+    
+    director = await create_test_director(client, headers)
+    director_id = director["id"]
 
     for i in range(5):
         response = await client.post(
@@ -139,32 +106,11 @@ async def test_get_movie_by_movie_id_success(client: AsyncClient, db_session: As
     token = await login_admin(client)
     headers = auth_header(token)
 
-    director_response = await client.post(
-        "/directors/",
-        json={
-            "first_name": "Test",
-            "last_name": "Tests",
-            "country": "Testland",
-            "birthday_date": "1970-08-30"
-        },
-        headers=headers
-    )
-    assert director_response.status_code == 201
+    director = await create_test_director(client, headers)
+    director_id = director["id"]
 
-    director_id = director_response.json()["id"]
-
-    response = await client.post(
-        "/movies/",
-        json={
-            "title": "test_title",
-            "genre": "Horror",
-            "release_year": 2015,
-            "director_id": director_id
-        },
-        headers=headers
-    )
-
-    movie_id = response.json()["id"]
+    movie_data = await create_test_movie(client, headers, director_id=director_id)
+    movie_id = movie_data["id"]
 
     get_response = await client.get(
         f"/movies/{movie_id}"
@@ -194,32 +140,11 @@ async def test_update_movie_success(client: AsyncClient, db_session: AsyncSessio
     token = await login_admin(client)
     headers = auth_header(token)
 
-    director_response = await client.post(
-        "/directors/",
-        json={
-            "first_name": "Test",
-            "last_name": "Tests",
-            "country": "Testland",
-            "birthday_date": "1970-08-30"
-        },
-        headers=headers
-    )
-    assert director_response.status_code == 201
+    director = await create_test_director(client, headers)
+    director_id = director["id"]
 
-    director_id = director_response.json()["id"]
-
-    response = await client.post(
-        "/movies/",
-        json={
-            "title": "test_title",
-            "genre": "Horror",
-            "release_year": 2015,
-            "director_id": director_id
-        },
-        headers=headers
-    )
-
-    movie_id = response.json()["id"]
+    movie_data = await create_test_movie(client, headers, director_id=director_id)
+    movie_id = movie_data["id"]
 
     update_response = await client.patch(
         f"/movies/{movie_id}",
@@ -254,32 +179,11 @@ async def test_update_movie_error_validation(client: AsyncClient, db_session: As
     token = await login_admin(client)
     headers = auth_header(token)
 
-    director_response = await client.post(
-        "/directors/",
-        json={
-            "first_name": "Test",
-            "last_name": "Tests",
-            "country": "Testland",
-            "birthday_date": "1970-08-30"
-        },
-        headers=headers
-    )
-    assert director_response.status_code == 201
+    director = await create_test_director(client, headers)
+    director_id = director["id"]
 
-    director_id = director_response.json()["id"]
-
-    response = await client.post(
-        "/movies/",
-        json={
-            "title": "test_title",
-            "genre": "Horror",
-            "release_year": 2015,
-            "director_id": director_id
-        },
-        headers=headers
-    )
-
-    movie_id = response.json()["id"]
+    movie_data = await create_test_movie(client, headers, director_id=director_id)
+    movie_id = movie_data["id"]
 
     update_response = await client.patch(
         f"/movies/{movie_id}",
@@ -299,32 +203,12 @@ async def test_delete_movie_success(client: AsyncClient, db_session: AsyncSessio
     token = await login_admin(client)
     headers = auth_header(token)
 
-    director_response = await client.post(
-        "/directors/",
-        json={
-            "first_name": "Test",
-            "last_name": "Tests",
-            "country": "Testland",
-            "birthday_date": "1970-08-30"
-        },
-        headers=headers
-    )
-    assert director_response.status_code == 201
+    director = await create_test_director(client, headers)
+    director_id = director["id"]
 
-    director_id = director_response.json()["id"]
-
-    response = await client.post(
-        "/movies/",
-        json={
-            "title": "test_title",
-            "genre": "Horror",
-            "release_year": 2015,
-            "director_id": director_id
-        },
-        headers=headers
-    )
-
-    movie_id = response.json()["id"]
+    movie_data = await create_test_movie(client, headers, director_id=director_id)
+    movie_id = movie_data["id"]
+    
 
     delete_response = await client.delete(
         f"/movies/{movie_id}",
@@ -354,32 +238,11 @@ async def test_upload_movie_picture_success(client: AsyncClient, db_session: Asy
     token = await login_admin(client)
     headers = auth_header(token)
 
-    director_response = await client.post(
-        "/directors/",
-        json={
-            "first_name": "Test",
-            "last_name": "Tests",
-            "country": "Testland",
-            "birthday_date": "1970-08-30"
-        },
-        headers=headers
-    )
-    assert director_response.status_code == 201
+    director = await create_test_director(client, headers)
+    director_id = director["id"]
 
-    director_id = director_response.json()["id"]
-
-    response = await client.post(
-        "/movies/",
-        json={
-            "title": "test_title",
-            "genre": "Horror",
-            "release_year": 2015,
-            "director_id": director_id
-        },
-        headers=headers
-    )
-
-    movie_id = response.json()["id"]
+    movie_data = await create_test_movie(client, headers, director_id=director_id)
+    movie_id = movie_data["id"]
 
     test_image_path = Path(__file__).parent / "test_image.jpg"
     image_bytes = test_image_path.read_bytes()
@@ -401,32 +264,11 @@ async def test_delete_movie_picture_success(client: AsyncClient, db_session: Asy
     token = await login_admin(client)
     headers = auth_header(token)
 
-    director_response = await client.post(
-        "/directors/",
-        json={
-            "first_name": "Test",
-            "last_name": "Tests",
-            "country": "Testland",
-            "birthday_date": "1970-08-30"
-        },
-        headers=headers
-    )
-    assert director_response.status_code == 201
+    director = await create_test_director(client, headers)
+    director_id = director["id"]
 
-    director_id = director_response.json()["id"]
-
-    response = await client.post(
-        "/movies/",
-        json={
-            "title": "test_title",
-            "genre": "Horror",
-            "release_year": 2015,
-            "director_id": director_id
-        },
-        headers=headers
-    )
-
-    movie_id = response.json()["id"]
+    movie_data = await create_test_movie(client, headers, director_id=director_id)
+    movie_id = movie_data["id"]
 
     test_image_path = Path(__file__).parent / "test_image.jpg"
     image_bytes = test_image_path.read_bytes()
@@ -472,32 +314,11 @@ async def test_upload_big_size_movie_picture(client: AsyncClient, db_session: As
     token = await login_admin(client)
     headers = auth_header(token)
 
-    director_response = await client.post(
-        "/directors/",
-        json={
-            "first_name": "Test",
-            "last_name": "Tests",
-            "country": "Testland",
-            "birthday_date": "1970-08-30"
-        },
-        headers=headers
-    )
-    assert director_response.status_code == 201
+    director = await create_test_director(client, headers)
+    director_id = director["id"]
 
-    director_id = director_response.json()["id"]
-
-    response = await client.post(
-        "/movies/",
-        json={
-            "title": "test_title",
-            "genre": "Horror",
-            "release_year": 2015,
-            "director_id": director_id
-        },
-        headers=headers
-    )
-
-    movie_id = response.json()["id"]
+    movie_data = await create_test_movie(client, headers, director_id=director_id)
+    movie_id = movie_data["id"]
 
     huge_file_bytes = b"0" * 17 * 1024 * 1024 
 
@@ -516,32 +337,11 @@ async def test_like_movie_by_movie_id_success(client: AsyncClient, db_session: A
     token = await login_admin(client)
     headers = auth_header(token)
 
-    director_response = await client.post(
-        "/directors/",
-        json={
-            "first_name": "Test",
-            "last_name": "Tests",
-            "country": "Testland",
-            "birthday_date": "1970-08-30"
-        },
-        headers=headers
-    )
-    assert director_response.status_code == 201
+    director = await create_test_director(client, headers)
+    director_id = director["id"]
 
-    director_id = director_response.json()["id"]
-
-    response = await client.post(
-        "/movies/",
-        json={
-            "title": "test_title",
-            "genre": "Horror",
-            "release_year": 2015,
-            "director_id": director_id
-        },
-        headers=headers
-    )
-
-    movie_id = response.json()["id"]
+    movie_data = await create_test_movie(client, headers, director_id=director_id)
+    movie_id = movie_data["id"]
 
     await create_test_user(client)
     user_token = await login_user(client)
@@ -562,32 +362,11 @@ async def test_delete_like_movie_by_movie_id_success(client: AsyncClient, db_ses
     token = await login_admin(client)
     headers = auth_header(token)
 
-    director_response = await client.post(
-        "/directors/",
-        json={
-            "first_name": "Test",
-            "last_name": "Tests",
-            "country": "Testland",
-            "birthday_date": "1970-08-30"
-        },
-        headers=headers
-    )
-    assert director_response.status_code == 201
+    director = await create_test_director(client, headers)
+    director_id = director["id"]
 
-    director_id = director_response.json()["id"]
-
-    response = await client.post(
-        "/movies/",
-        json={
-            "title": "test_title",
-            "genre": "Horror",
-            "release_year": 2015,
-            "director_id": director_id
-        },
-        headers=headers
-    )
-
-    movie_id = response.json()["id"]
+    movie_data = await create_test_movie(client, headers, director_id=director_id)
+    movie_id = movie_data["id"]
 
     await create_test_user(client)
     user_token = await login_user(client)
@@ -630,32 +409,11 @@ async def test_comment_movie_by_movie_id_success(client: AsyncClient, db_session
     token = await login_admin(client)
     headers = auth_header(token)
 
-    director_response = await client.post(
-        "/directors/",
-        json={
-            "first_name": "Test",
-            "last_name": "Tests",
-            "country": "Testland",
-            "birthday_date": "1970-08-30"
-        },
-        headers=headers
-    )
-    assert director_response.status_code == 201
+    director = await create_test_director(client, headers)
+    director_id = director["id"]
 
-    director_id = director_response.json()["id"]
-
-    response = await client.post(
-        "/movies/",
-        json={
-            "title": "test_title",
-            "genre": "Horror",
-            "release_year": 2015,
-            "director_id": director_id
-        },
-        headers=headers
-    )
-
-    movie_id = response.json()["id"]
+    movie_data = await create_test_movie(client, headers, director_id=director_id)
+    movie_id = movie_data["id"]
 
     await create_test_user(client)
     user_token = await login_user(client)
@@ -679,32 +437,11 @@ async def test_delete_comment_movie_by_movie_id_success(client: AsyncClient, db_
     token = await login_admin(client)
     headers = auth_header(token)
 
-    director_response = await client.post(
-        "/directors/",
-        json={
-            "first_name": "Test",
-            "last_name": "Tests",
-            "country": "Testland",
-            "birthday_date": "1970-08-30"
-        },
-        headers=headers
-    )
-    assert director_response.status_code == 201
+    director = await create_test_director(client, headers)
+    director_id = director["id"]
 
-    director_id = director_response.json()["id"]
-
-    response = await client.post(
-        "/movies/",
-        json={
-            "title": "test_title",
-            "genre": "Horror",
-            "release_year": 2015,
-            "director_id": director_id
-        },
-        headers=headers
-    )
-
-    movie_id = response.json()["id"]
+    movie_data = await create_test_movie(client, headers, director_id=director_id)
+    movie_id = movie_data["id"]
 
     await create_test_user(client)
     user_token = await login_user(client)

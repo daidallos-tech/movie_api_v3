@@ -1,5 +1,6 @@
 import os
 import pytest
+from datetime import date, datetime
 from collections.abc import AsyncGenerator
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -137,3 +138,49 @@ async def login_admin(client: AsyncClient) -> str:
     assert response.status_code == 200, f"Login failed: {response.text}"
     
     return response.json()["access_token"]
+
+# Create director
+async def create_test_director(
+    client: AsyncClient,
+    headers: dict,
+    first_name: str = "Test",
+    last_name: str = "Tests",
+    country: str = "Testland",
+    birthday_date: str = "1970-08-30"
+) -> dict:
+    response = await client.post(
+        "/directors/",
+        json={
+            "first_name": first_name,
+            "last_name": last_name,
+            "country": country,
+            "birthday_date": birthday_date
+        },
+        headers=headers
+    )
+    assert response.status_code == 201
+    return response.json()
+
+# Create movie
+async def create_test_movie(
+    client: AsyncClient,
+    headers: dict,
+    director_id: int,
+    title: str = "test_title",
+    genre: str = "Horror",
+    release_year: int = 2015,
+    
+) -> dict:
+    response = await client.post(
+        "/movies/",
+        json={
+            "title": title,
+            "genre": genre,
+            "release_year": release_year,
+            "director_id": director_id
+        },
+        headers=headers
+    )
+    assert response.status_code == 201
+    return response.json()
+    
