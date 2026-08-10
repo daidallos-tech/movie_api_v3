@@ -7,7 +7,11 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.pool import NullPool
 from sqlalchemy import text
 
-os.environ["DATABASE_URL"] = "postgresql+psycopg://postgres:379137@localhost/test_movies_db"
+os.environ["DATABASE_URL"] = os.getenv(
+    "DATABASE_URL", 
+    "postgresql+psycopg://postgres:379137@localhost/test_movies_db"
+)
+
 
 from db.database import Base, get_db
 from main import app
