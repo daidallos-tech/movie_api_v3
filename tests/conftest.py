@@ -69,7 +69,7 @@ async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
 
     app.dependency_overrides.clear()
 
-
+# === USER ===
 async def create_test_user(
     client: AsyncClient,
     username: str = "testuser",
