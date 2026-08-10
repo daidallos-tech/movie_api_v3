@@ -1,6 +1,6 @@
 import pytest
 from httpx import AsyncClient
-from tests.conftest import auth_header, create_test_admin, login_admin
+from tests.conftest import auth_header, create_test_admin, login_admin, create_test_director
 from sqlalchemy.ext.asyncio import AsyncSession
 from pathlib import Path
 
@@ -11,23 +11,13 @@ async def test_create_director_success(client: AsyncClient, db_session: AsyncSes
     token = await login_admin(client)
     headers = auth_header(token)
 
-    director_response = await client.post(
-        "/directors/",
-        json={
-            "first_name": "Test",
-            "last_name": "Tests",
-            "country": "Testland",
-            "birthday_date": "1970-08-30"
-        },
-        headers=headers
-    )
-    assert director_response.status_code == 201
-    data = director_response.json()
-    assert data["first_name"] == "Test"
-    assert data["last_name"] == "Tests"
-    assert data["country"] == "Testland"
-    assert data["birthday_date"] == "1970-08-30"
-    assert "id" in data
+    director_data = await create_test_director(client, headers) 
+    
+    assert director_data["first_name"] == "Test"
+    assert director_data["last_name"] == "Tests"
+    assert director_data["country"] == "Testland"
+    assert director_data["birthday_date"] == "1970-08-30"
+    assert "id" in director_data
 
 @pytest.mark.anyio
 async def test_create_director_by_non_authorized(client: AsyncClient):
@@ -107,18 +97,8 @@ async def test_get_director_by_id(client: AsyncClient, db_session: AsyncSession)
     token = await login_admin(client)
     headers = auth_header(token)
 
-    director_response = await client.post(
-        "/directors/",
-        json={
-            "first_name": "Test",
-            "last_name": "Tests",
-            "country": "Testland",
-            "birthday_date": "1970-08-30"
-        },
-        headers=headers
-    )
-    assert director_response.status_code == 201
-    director_id = director_response.json()["id"]
+    director_data = await create_test_director(client, headers)
+    director_id = director_data["id"]
 
     get_response = await client.get(
         f"/directors/{director_id}"
@@ -140,18 +120,8 @@ async def test_update_director_success(client: AsyncClient, db_session: AsyncSes
     token = await login_admin(client)
     headers = auth_header(token)
 
-    director_response = await client.post(
-        "/directors/",
-        json={
-            "first_name": "Test",
-            "last_name": "Tests",
-            "country": "Testland",
-            "birthday_date": "1970-08-30"
-        },
-        headers=headers
-    )
-    assert director_response.status_code == 201
-    director_id = director_response.json()["id"]
+    director_data = await create_test_director(client, headers)
+    director_id = director_data["id"]
 
     update_response = await client.patch(
         f"/directors/{director_id}",
@@ -185,18 +155,8 @@ async def test_update_director_error_validation(client: AsyncClient, db_session:
     token = await login_admin(client)
     headers = auth_header(token)
 
-    director_response = await client.post(
-        "/directors/",
-        json={
-            "first_name": "Test",
-            "last_name": "Tests",
-            "country": "Testland",
-            "birthday_date": "1970-08-30"
-        },
-        headers=headers
-    )
-    assert director_response.status_code == 201
-    director_id = director_response.json()["id"]
+    director_data = await create_test_director(client, headers)
+    director_id = director_data["id"]
 
     update_response = await client.patch(
         f"/directors/{director_id}",
@@ -215,18 +175,8 @@ async def test_delete_director_success(client: AsyncClient, db_session: AsyncSes
     token = await login_admin(client)
     headers = auth_header(token)
 
-    director_response = await client.post(
-        "/directors/",
-        json={
-            "first_name": "Test",
-            "last_name": "Tests",
-            "country": "Testland",
-            "birthday_date": "1970-08-30"
-        },
-        headers=headers
-    )
-    assert director_response.status_code == 201
-    director_id = director_response.json()["id"]
+    director_data = await create_test_director(client, headers)
+    director_id = director_data["id"]
 
     movie_res = await client.post(
         "/movies/",
@@ -269,19 +219,8 @@ async def test_upload_director_picture_success(client: AsyncClient, db_session: 
     token = await login_admin(client)
     headers = auth_header(token)
 
-    director_response = await client.post(
-        "/directors/",
-        json={
-            "first_name": "Test",
-            "last_name": "Tests",
-            "country": "Testland",
-            "birthday_date": "1970-08-30"
-        },
-        headers=headers
-    )
-    assert director_response.status_code == 201
-
-    director_id = director_response.json()["id"]
+    director_data = await create_test_director(client, headers)
+    director_id = director_data["id"]
 
     test_image_path = Path(__file__).parent / "test_image.jpg"
     image_bytes = test_image_path.read_bytes()
@@ -303,19 +242,8 @@ async def test_delete_director_picture_success(client: AsyncClient, db_session: 
     token = await login_admin(client)
     headers = auth_header(token)
 
-    director_response = await client.post(
-        "/directors/",
-        json={
-            "first_name": "Test",
-            "last_name": "Tests",
-            "country": "Testland",
-            "birthday_date": "1970-08-30"
-        },
-        headers=headers
-    )
-    assert director_response.status_code == 201
-
-    director_id = director_response.json()["id"]
+    director_data = await create_test_director(client, headers)
+    director_id = director_data["id"]
 
     test_image_path = Path(__file__).parent / "test_image.jpg"
     image_bytes = test_image_path.read_bytes()
@@ -360,19 +288,8 @@ async def test_upload_big_size_director_picture(client: AsyncClient, db_session:
     token = await login_admin(client)
     headers = auth_header(token)
 
-    director_response = await client.post(
-        "/directors/",
-        json={
-            "first_name": "Test",
-            "last_name": "Tests",
-            "country": "Testland",
-            "birthday_date": "1970-08-30"
-        },
-        headers=headers
-    )
-    assert director_response.status_code == 201
-
-    director_id = director_response.json()["id"]
+    director_data = await create_test_director(client, headers)
+    director_id = director_data["id"]
 
     huge_file_bytes = b"0" * 17 * 1024 * 1024 
 
