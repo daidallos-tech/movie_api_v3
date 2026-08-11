@@ -95,7 +95,7 @@ movie_api_v3/
 ├── alembic/
 │   └── ...
 │
-├── .dockerignore
+├──.dockerignore
 ├──.gitignore
 ├── Dockerfile
 ├── docker-compose.yml
@@ -106,3 +106,32 @@ movie_api_v3/
 ├── .env.example
 ├── alembic.ini
 └── main.py
+```
+🔐 Authentication
+I created two roles - admin and user. Both of them use JWT authentication.
+I decided to make just one token for whole session and made this token alive for 30 days.
+
+User
+  │
+  ▼
+Login
+  │
+  ▼
+Access Token
+  │
+  ▼
+Authorization: Bearer (token)
+  │
+  ▼
+Protected endpoint
+
+🗄 Database
+We have 6 tables in database. Also I use alembic for migrations.
+
+1. User
+2. Movie -> (one-to-many with directors)
+3. Director -> (one-to-many with movie)
+4. Likes -> (many-to-many with users and movies)
+5. Comments -> (many-to-many with users and movies)
+6. Password Reset -> (one-to-many with users)
+
