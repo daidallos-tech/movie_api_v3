@@ -171,7 +171,7 @@ To run test (no in docker env)
 python -m pytest -s -v
 ```
 Tests screenshot
-<img width="2716" height="598" alt="image" src="https://github.com/user-attachments/assets/258ed9b7-4e88-4cce-b78a-c3e388880375" />
+<img width="2716" height="562" alt="image" src="https://github.com/user-attachments/assets/5a288bda-3a14-4f41-b9cf-0479b950f3be" />
 
 
 
