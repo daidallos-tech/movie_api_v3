@@ -148,8 +148,20 @@ Director Endpoints ->
 
 ## 🚀 How to install?
 
-1. Clone repository
+1. Clone repository 
 ```bash
-git clone 
+git clone git@github.com:daidallos-tech/movie_api_v3.git
 ```
+2. Go to project directory
+```bash
+cd movie_api_v3
+```
+3. Create .env file and copy everything from .env.example to paste in .env
+4. Use docker command to start the project
+```bash
+docker compose up -d --build
+```
+
+
+
 
