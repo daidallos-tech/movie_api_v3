@@ -14,19 +14,17 @@ from schemas.schemas import (
     DirectorUpdate,
 )
 from routers.auth import(
-    CurrentUser,
     CurrentAdmin,
 )
 from starlette.concurrency import run_in_threadpool
 from db.config import settings
 from utils.image_utils import delete_image, process_and_save_image
 
-from datetime import date
 
 router = APIRouter(prefix="/directors", tags=["Directors"])
 
 
-# --- USER'S ROUTERS ---
+# --- USER'S ENDPOINTS ---
 # Return all directors
 @router.get("/", response_model=LimitOffsetPage[DirectorResponse])
 async def get_directors(
@@ -69,7 +67,7 @@ async def get_director_by_id(director_id: int, db: Annotated[AsyncSession, Depen
         return director
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Director not found")
 
-# --- ADMIN'S ROUTERS ---
+# --- ADMIN'S ENDPOINTS ---
 # Create director
 @router.post("/", response_model=DirectorResponse, status_code=status.HTTP_201_CREATED)
 async def create_director(
@@ -101,7 +99,7 @@ async def create_director(
 
     return new_director
 
-# Partial update
+# Partial director update
 @router.patch("/{director_id}", response_model=DirectorResponse)
 async def update_director_partial(
     director_id: int,

@@ -29,8 +29,7 @@ from utils.image_utils import delete_image, process_and_save_image
 
 router = APIRouter(prefix="/movies", tags=["Movies"])
 
-# --- USER'S ROUTERS ---
-
+# --- USER'S ENDPOINTS ---
 # Return all movies
 @router.get("/", response_model=LimitOffsetPage[MovieResponse])
 async def get_movies(
@@ -44,7 +43,6 @@ async def get_movies(
     query = (
         select(models.Movie)
         .options(selectinload(models.Movie.director))
-        #.order_by(models.Movie.id.desc())
     )
     if genre:
         query = query.where(models.Movie.genre == genre)
@@ -75,7 +73,7 @@ async def get_movie_by_id(movie_id: int, db: Annotated[AsyncSession, Depends(get
         return movie
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Movie not found")
 
-# Like Movie use movie's id
+# Like Movie using movie's id
 @router.post("/{movie_id}/like")
 async def like_movie(
     movie_id: int,
@@ -156,7 +154,7 @@ async def delete_like(
         "message": "Movie was unliked successfully."
     }
 
-# Get like use movie's id
+# Get like using movie's id
 @router.get("/{movie_id}/likes", response_model=LimitOffsetPage[MovieLikeRead])
 async def get_likes(
     movie_id: int,
@@ -226,7 +224,7 @@ async def comment_movie(
         "message": "Comment was created successfully."
     }
 
-# Delete movie's comment use movie's id
+# Delete movie's comment using movie's id
 @router.delete("/{movie_id}/comment")
 async def delete_comment(
     movie_id: int,
@@ -259,7 +257,7 @@ async def delete_comment(
         "message": "Comment was deleted successfully."
     }
 
-# Get commentaries use movie's id
+# Get commentaries using movie's id
 @router.get("/{movie_id}/comments", response_model=LimitOffsetPage[MovieCommentRead])
 async def get_comments(
     movie_id: int,
@@ -284,7 +282,7 @@ async def get_comments(
 
 
 
-# --- ADMIN'S ROUTERS ---
+# --- ADMIN'S ENDPOINTS ---
 # Create movie
 @router.post("/", response_model=MovieResponse, status_code=status.HTTP_201_CREATED)
 async def create_movie(
@@ -313,7 +311,7 @@ async def create_movie(
 
     return new_movie
 
-# Partial update
+# Partial movie update
 @router.patch("/{movie_id}", response_model=MovieResponse)
 async def update_movie_partial(
     movie_id: int,

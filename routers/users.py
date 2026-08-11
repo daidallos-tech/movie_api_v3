@@ -37,6 +37,7 @@ from schemas.schemas import (
 
 router = APIRouter()
 
+# === USER'S ENDPOINTS ===
 # User creation
 @router.post(
     "",
@@ -229,7 +230,7 @@ async def change_password(
     await db.commit()
     return {"message": "Password changed successfully"}
 
-# Get user use user's id
+# Get user using user's id
 @router.get("/{user_id}", response_model=UserPublic)
 async def get_user(user_id: int, db: Annotated[AsyncSession, Depends(get_db)]):
     result = await db.execute(select(models.User).where(models.User.id == user_id))
@@ -368,7 +369,7 @@ async def delete_profile_picture(
     return current_user
 
 
-# --- ADMIN'S ROUTER ---
+# --- ADMIN'S ENDPOINTS ---
 # Delete user by user's id
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user_by_id(
