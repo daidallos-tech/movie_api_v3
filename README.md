@@ -166,7 +166,8 @@ docker compose up -d --build
 
 Tests are written using Pytest.
 
-To run test (no in docker env)
+To run test (outside docker container)
+
 ```bash
 python -m pytest -s -v
 ```
