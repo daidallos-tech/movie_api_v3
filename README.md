@@ -135,6 +135,17 @@ We have 6 tables in database. Also I use alembic for migrations.
 5. Comments -> (many-to-many with users and movies)
 6. Password Reset -> (one-to-many with users)
 
-📺 Endpoints screenshots
+📺 Endpoints screenshots.
+
 User Endpoints ->
 <img width="2926" height="1466" alt="image" src="https://github.com/user-attachments/assets/86b66563-7abb-44b0-8280-07f44a73425a" />
+
+Movie Endpoints ->
+<img width="2926" height="1536" alt="image" src="https://github.com/user-attachments/assets/ff4ae56c-a5d1-496c-8efd-43a34c1b9a95" />
+
+Director Endpoints ->
+<img width="2926" height="880" alt="image" src="https://github.com/user-attachments/assets/ef54da7f-69f7-432f-a47b-aa5d7ccb6d96" />
+
+
+
+
