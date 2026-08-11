@@ -146,6 +146,10 @@ Movie Endpoints ->
 Director Endpoints ->
 <img width="2926" height="880" alt="image" src="https://github.com/user-attachments/assets/ef54da7f-69f7-432f-a47b-aa5d7ccb6d96" />
 
+## 🚀 How to install?
 
-
+1. Clone repository
+```bash
+git clone 
+```
 
