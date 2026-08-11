@@ -57,30 +57,31 @@ what solve problem in my project not to just add it.
 
 ---
 
-## 🏗 Project Structure
+## 🏛️ Project Structure
 
 ```text
 movie_api_v3/
 │
-├── auth/
-│   ├── ...
-│
 ├── db/
+|   ├── config.py
 │   ├── database.py
 │   └── models.py
 │
+├── init-scripts/
+|   └── init.sql
+|
 ├── routers/
 │   ├── users.py
 │   ├── movies.py
 │   ├── directors.py
-│   └── [TODO].py
+│   └── auth.py
 │
 ├── schemas/
-│   ├── ...
+│   └── schemas.py
 │
 ├── utils/
 │   ├── image_utils.py
-│   └── ...
+│   └── email_utils.py
 │
 ├── tests/
 │   ├── conftest.py
@@ -88,18 +89,20 @@ movie_api_v3/
 │   ├── test_movies.py
 │   └── [TODO]
 │
-├── templates/
-│   └── ...
-│
-├── media/
-│   └── ...
+├── templates/email
+│   └── password_reset.html
 │
 ├── alembic/
 │   └── ...
 │
+├── .dockerignore
+├──.gitignore
 ├── Dockerfile
 ├── docker-compose.yml
-├── requirements.txt
+├── docker-entrypoint.sh
+├── LICENSE
+├── README.md
+├── pyproject.toml
 ├── .env.example
 ├── alembic.ini
 └── main.py
