@@ -162,6 +162,19 @@ cd movie_api_v3
 docker compose up -d --build
 ```
 
+🧪 Testing
+
+Tests are written using Pytest.
+
+To run test (no in docker env)
+```bash
+python -m pytest -s -v
+```
+Tests screenshot
+<img width="2716" height="598" alt="image" src="https://github.com/user-attachments/assets/258ed9b7-4e88-4cce-b78a-c3e388880375" />
+
+
+
 
 
 
